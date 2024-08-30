@@ -1,4 +1,4 @@
-package com.example.myfriendcinnamoroll
+package com.ordrstudio.zflipcinnamoroll
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.Orientation
@@ -25,7 +25,7 @@ fun CinnamorollSprite(state: CinnamorollState, onDrag: (Long) -> Unit, modifier:
     resourceId = when (state.actionState) {
         ActionState.Idling -> if (petting)
             R.drawable.cinnamorollcontent
-        else if (state.isDepressed)
+        else if (state.isDepressed())
             R.drawable.cinnamorolldepressed
         else
             R.drawable.cinnamorollidle
@@ -48,7 +48,7 @@ fun CinnamorollSprite(state: CinnamorollState, onDrag: (Long) -> Unit, modifier:
             .draggable(
                 onDragStarted = { petting = true },
                 onDragStopped = { petting = false },
-                state = (rememberDraggableState { delta -> onDrag( abs(delta).toLong() ) }),
+                state = (rememberDraggableState { delta -> onDrag( abs(delta).toLong() * 10 ) }),
                 orientation = Orientation.Horizontal
             )
             .fillMaxWidth()

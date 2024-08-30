@@ -1,4 +1,4 @@
-package com.example.myfriendcinnamoroll
+package com.ordrstudio.zflipcinnamoroll
 
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package com.example.myfriendcinnamoroll
+package com.ordrstudio.zflipcinnamoroll
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +22,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+
+data class HealthStatus (
+    val hungerProgress: Float,
+    val sleepyProgress: Float,
+    val lonelyProgress: Float,
+    val boredProgress: Float,
+)
 
 fun getHealthStatus(state: CinnamorollState): HealthStatus {
     val currentTime = System.currentTimeMillis()

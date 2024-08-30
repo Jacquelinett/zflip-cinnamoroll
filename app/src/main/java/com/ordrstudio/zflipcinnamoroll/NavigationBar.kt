@@ -1,4 +1,4 @@
-package com.example.myfriendcinnamoroll
+package com.ordrstudio.zflipcinnamoroll
 
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.BottomAppBar
@@ -27,7 +27,7 @@ fun NavigationBar(
         actions = {
             TextButton(
                 onClick = { updateActionState(ActionState.Idling) },
-                enabled = state.canIdle,
+                enabled = state.canIdle(),
             ) {
                 Text("\uD83D\uDE42", fontSize = 20.sp)
             }

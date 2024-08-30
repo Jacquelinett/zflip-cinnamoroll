@@ -1,33 +1,19 @@
-package com.example.myfriendcinnamoroll
+package com.ordrstudio.zflipcinnamoroll
 
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.media.AudioManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,32 +21,77 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat.getDrawable
-import com.example.myfriendcinnamoroll.ui.theme.MyFriendCinnamorollTheme
-import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import com.ordrstudio.zflipcinnamoroll.ui.theme.MyFriendCinnamorollTheme
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.toObject
 import kotlinx.coroutines.delay
-import kotlin.math.abs
+import java.time.LocalDateTime
 
 const val FLIP_SCREEN_WIDTH = 720 / 2
 const val FLIP_SCREEN_HEIGHT = 748 / 2
 
+const val CINNAMOROLL_STATE_FIREBASE_STRING = "cinnamorolls"
+
+// NOTES: Get ID from authentication or something down the road
+const val TEMPORARY_ID = "jacqueline"
+
 class MainActivity : ComponentActivity() {
+    val db = Firebase.firestore
+    val stateRef = db.collection(CINNAMOROLL_STATE_FIREBASE_STRING).document(TEMPORARY_ID)
+    var state = CinnamorollState()
+    var stateCache = CinnamorollState()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+        println("onCreate run")
+        stateRef.get()
+            .addOnSuccessListener { document ->
+                if (document != null) {
+                    Log.d(TAG, "DocumentSnapshot data: ${document.data}")
+                    state = document.toObject<CinnamorollState>()!!
+                    stateCache = state
+                    Log.d(TAG, "state data: ${state}")
+                } else {
+                    Log.d(TAG, "No such document")
+                    stateRef.set(state)
+                        .addOnSuccessListener { documentReference ->
+                            Log.d(TAG, "DocumentSnapshot written")
+                        }
+                        .addOnFailureListener { e ->
+                            Log.w(TAG, "Error adding document", e)
+                        }
+                }
+
+                val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                setContent {
+                    ZFlipCinnamoroll(audioManager = audioManager)
+                }
+            }
+            .addOnFailureListener { exception ->
+                Log.d(TAG, "get failed with ", exception)
+            }
+
         setContent {
-            MyFriendCinnamoroll(audioManager = audioManager)
+            Text("Loading...")
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        println(stateCache)
+        stateRef.set(stateCache)
+            .addOnSuccessListener { documentReference ->
+                Log.d(TAG, "DocumentSnapshot written")
+            }
+            .addOnFailureListener { e ->
+                Log.w(TAG, "Error adding document", e)
+            }
     }
 
     @Preview(
@@ -69,14 +100,21 @@ class MainActivity : ComponentActivity() {
         heightDp = FLIP_SCREEN_HEIGHT,
     )
     @Composable
-    fun MyFriendCinnamorollPreview() {
-        MyFriendCinnamoroll()
+    fun ZFlipCinnamorollPreview() {
+        ZFlipCinnamoroll()
     }
 
     @Composable
-    fun MyFriendCinnamoroll(audioManager: AudioManager? = null) {
+    fun ZFlipCinnamoroll(audioManager: AudioManager? = null) {
         MyFriendCinnamorollTheme {
-            var state by rememberSaveable { mutableStateOf(CinnamorollState(ActionState.Idling)) }
+            var state by rememberSaveable { mutableStateOf(state) }
+
+            val saveState: () -> Unit = {
+                state = state.copy(
+                    lastUpdated =  LocalDateTime.now().toString()
+                )
+                stateCache = state
+            }
 
             val updateLastBoredom: (Long) -> Unit = { increaseBy: Long ->
                 run {
@@ -87,6 +125,7 @@ class MainActivity : ComponentActivity() {
                     newLastBoredom += increaseBy
                     if (newLastBoredom > currentTime) newLastBoredom = currentTime
                     state = state.copy(lastBoredom = newLastBoredom)
+                    saveState()
                 }
             }
 
@@ -99,6 +138,7 @@ class MainActivity : ComponentActivity() {
                     newLastLethargy += increaseBy
                     if (newLastLethargy > currentTime) newLastLethargy = currentTime
                     state = state.copy(lastLethargy = newLastLethargy)
+                    saveState()
                 }
             }
 
@@ -112,8 +152,8 @@ class MainActivity : ComponentActivity() {
                     if (newLastDepression > currentTime) newLastDepression = currentTime
                     state = state.copy(
                         lastDepression = newLastDepression,
-                        shouldRerenderOnNegativeStat = true
                     )
+                    saveState()
                 }
             }
             val updateLastStarved: () -> Unit = {
@@ -126,6 +166,7 @@ class MainActivity : ComponentActivity() {
                     if (newLastStarved > currentTime) newLastStarved = currentTime
                     state =
                         state.copy(actionState = ActionState.Idling, lastStarved = newLastStarved)
+                    saveState()
                 }
             }
 
@@ -146,6 +187,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     state = state.copy(actionState = actionState)
+                    saveState()
                 }
             }
 
@@ -157,11 +199,6 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(state) {
                 while (true) {
                     val currentTime = System.currentTimeMillis()
-
-                    if (state.shouldRerenderOnNegativeStat) {
-                        if (state.isDepressed) state =
-                            state.copy(shouldRerenderOnNegativeStat = false)
-                    }
 
                     if (state.actionState == ActionState.Eating) {
                         if (currentTime - state.startedEating > EAT_DURATION) {

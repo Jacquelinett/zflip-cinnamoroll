@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MyFriendCinnamoroll"
+rootProject.name = "ZFlipCinnamoroll"
 include(":app")

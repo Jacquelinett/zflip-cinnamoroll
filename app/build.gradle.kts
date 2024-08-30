@@ -2,14 +2,15 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     id("kotlin-parcelize")
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.myfriendcinnamoroll"
+    namespace = "com.ordrstudio.zflipcinnamoroll"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.myfriendcinnamoroll"
+        applicationId = "com.ordrstudio.zflipcinnamoroll"
         minSdk = 34
         targetSdk = 34
         versionCode = 1
@@ -62,6 +63,9 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.accompanist.drawablepainter)
     implementation(libs.androidx.material)
+    implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-firestore")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

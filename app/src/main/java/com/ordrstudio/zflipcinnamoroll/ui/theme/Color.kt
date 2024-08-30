@@ -1,4 +1,4 @@
-package com.example.myfriendcinnamoroll.ui.theme
+package com.ordrstudio.zflipcinnamoroll.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
