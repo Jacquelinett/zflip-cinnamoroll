@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -44,12 +45,15 @@ class MainActivity : ComponentActivity() {
     val stateRef = db.collection(CINNAMOROLL_STATE_FIREBASE_STRING).document(TEMPORARY_ID)
     var state = CinnamorollState()
     var stateCache = CinnamorollState()
+    val setIsPetting: (Boolean) -> Unit = {
+        petting: Boolean -> state.isBeingPetted = petting
+    }
+    val gameLogic = GameLogic()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        println("onCreate run")
         stateRef.get()
             .addOnSuccessListener { document ->
                 if (document != null) {
@@ -70,7 +74,14 @@ class MainActivity : ComponentActivity() {
 
                 val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 setContent {
-                    ZFlipCinnamoroll(audioManager = audioManager)
+                    LaunchedEffect(state) {
+                        while (true) {
+                            val currentTime = System.currentTimeMillis()
+                            state.calculateChange(currentTime, audioManager.isMusicActive() ?: false)
+                            delay(250)
+                        }
+                    }
+                    ZFlipCinnamoroll()
                 }
             }
             .addOnFailureListener { exception ->
@@ -84,7 +95,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        println(stateCache)
         stateRef.set(stateCache)
             .addOnSuccessListener { documentReference ->
                 Log.d(TAG, "DocumentSnapshot written")
@@ -105,117 +115,11 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun ZFlipCinnamoroll(audioManager: AudioManager? = null) {
+    fun ZFlipCinnamoroll() {
         MyFriendCinnamorollTheme {
-            var state by rememberSaveable { mutableStateOf(state) }
-
-            val saveState: () -> Unit = {
-                state = state.copy(
-                    lastUpdated =  LocalDateTime.now().toString()
-                )
-                stateCache = state
-            }
-
-            val updateLastBoredom: (Long) -> Unit = { increaseBy: Long ->
-                run {
-                    val currentTime = System.currentTimeMillis()
-                    var newLastBoredom = state.lastBoredom
-                    if (newLastBoredom < currentTime - TIME_TO_BOREDOM) newLastBoredom =
-                        currentTime - TIME_TO_BOREDOM
-                    newLastBoredom += increaseBy
-                    if (newLastBoredom > currentTime) newLastBoredom = currentTime
-                    state = state.copy(lastBoredom = newLastBoredom)
-                    saveState()
-                }
-            }
-
-            val updateLastLethargy: (Long) -> Unit = { increaseBy: Long ->
-                run {
-                    val currentTime = System.currentTimeMillis()
-                    var newLastLethargy = state.lastDepression
-                    if (newLastLethargy < currentTime - TIME_TO_LETHARGY) newLastLethargy =
-                        currentTime - TIME_TO_LETHARGY
-                    newLastLethargy += increaseBy
-                    if (newLastLethargy > currentTime) newLastLethargy = currentTime
-                    state = state.copy(lastLethargy = newLastLethargy)
-                    saveState()
-                }
-            }
-
-            val updateLastDepression: (Long) -> Unit = { increaseBy: Long ->
-                run {
-                    val currentTime = System.currentTimeMillis()
-                    var newLastDepression = state.lastDepression
-                    if (newLastDepression < currentTime - TIME_TO_DEPRESSION) newLastDepression =
-                        currentTime - TIME_TO_DEPRESSION
-                    newLastDepression += increaseBy
-                    if (newLastDepression > currentTime) newLastDepression = currentTime
-                    state = state.copy(
-                        lastDepression = newLastDepression,
-                    )
-                    saveState()
-                }
-            }
-            val updateLastStarved: () -> Unit = {
-                run {
-                    val currentTime = System.currentTimeMillis()
-                    var newLastStarved = state.lastStarved
-                    if (newLastStarved < currentTime - TIME_TO_STARVE) newLastStarved =
-                        currentTime - TIME_TO_STARVE
-                    newLastStarved += HUNGER_RECOVERY_RATE
-                    if (newLastStarved > currentTime) newLastStarved = currentTime
-                    state =
-                        state.copy(actionState = ActionState.Idling, lastStarved = newLastStarved)
-                    saveState()
-                }
-            }
-
-            val updateActionState: (ActionState) -> Unit = { actionState: ActionState ->
-                run {
-                    val currentTime = System.currentTimeMillis()
-                    if (actionState == ActionState.Eating) {
-                        state = state.copy(startedEating = currentTime)
-                    } else if (actionState == ActionState.Sleeping) {
-                        state = state.copy(startedSleeping = currentTime)
-                    } else if (actionState == ActionState.Listening) {
-                        state = state.copy(startedListening = currentTime)
-                    } else if (actionState == ActionState.Idling) {
-                        if (state.actionState == ActionState.Sleeping) {
-                            updateLastLethargy((currentTime - state.startedSleeping) * 2)
-                        } else if (state.actionState == ActionState.Listening) {
-                            updateLastBoredom((currentTime - state.startedListening) * 2)
-                        }
-                    }
-                    state = state.copy(actionState = actionState)
-                    saveState()
-                }
-            }
-
             var shouldDisplayHUD by remember { mutableStateOf(true) }
-            val toggleeDisplayHUD: () -> Unit = {
+            val toggleDisplayHUD: () -> Unit = {
                 shouldDisplayHUD = !shouldDisplayHUD
-            }
-
-            LaunchedEffect(state) {
-                while (true) {
-                    val currentTime = System.currentTimeMillis()
-
-                    if (state.actionState == ActionState.Eating) {
-                        if (currentTime - state.startedEating > EAT_DURATION) {
-                            updateLastStarved()
-                        }
-                    } else if (state.actionState == ActionState.Idling) {
-                        if (audioManager?.isMusicActive() == true) {
-                            updateActionState(ActionState.Listening)
-                        }
-                    } else if (state.actionState == ActionState.Listening) {
-                        if (audioManager?.isMusicActive() == false) {
-                            updateActionState(ActionState.Idling)
-                        }
-                    }
-//
-                    delay(250)
-                }
             }
 
             Scaffold(
@@ -226,7 +130,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 },
-                bottomBar = { NavigationBar(state, updateActionState, toggleeDisplayHUD) },
+                bottomBar = { NavigationBar(state, toggleDisplayHUD) },
                 content = { padding ->
                     Box(
                         modifier = Modifier
@@ -235,7 +139,8 @@ class MainActivity : ComponentActivity() {
                     ) {
                         CinnamorollSprite(
                             state,
-                            updateLastDepression
+                            setIsPetting,
+                            gameLogic
                         )
                     }
                 },

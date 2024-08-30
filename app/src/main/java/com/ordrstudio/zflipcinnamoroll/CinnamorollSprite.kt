@@ -7,25 +7,52 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat.getDrawable
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 
 @Composable
-fun CinnamorollSprite(state: CinnamorollState, onDrag: (Long) -> Unit, modifier: Modifier = Modifier) {
-    var petting by remember { mutableStateOf<Boolean>(false) }
-    var resourceId: Int = R.drawable.cinnamorollidle
-    resourceId = when (state.actionState) {
-        ActionState.Idling -> if (petting)
-            R.drawable.cinnamorollcontent
-        else if (state.isDepressed())
+fun CinnamorollSprite(
+    state: CinnamorollState,
+    setDrag: (Boolean) -> Unit,
+    gameLogic: GameLogic,
+    modifier: Modifier = Modifier
+) {
+    var rerender by rememberSaveable { mutableStateOf (false) }
+    var actionState by rememberSaveable { mutableStateOf (state.actionState) }
+    var isBeingPetted by rememberSaveable { mutableStateOf (state.isBeingPetted) }
+    var isListeningToMusic by rememberSaveable { mutableStateOf (state.isListeningToMusic) }
+    var isDepressed by rememberSaveable { mutableStateOf (state.isDepressed()) }
+    val doRerender: () -> Unit = {
+        rerender = !rerender
+        actionState = state.actionState
+        isBeingPetted = state.isBeingPetted
+        isListeningToMusic = state.isListeningToMusic
+        isDepressed = state.isDepressed()
+    }
+    LaunchedEffect(rerender) {
+        while (true) {
+            val shouldRerender = gameLogic.shouldRerenderSprite(state)
+            if (shouldRerender) doRerender()
+            delay(250)
+        }
+    }
+
+    val resourceId = when (actionState) {
+        ActionState.Idling ->
+            if (isBeingPetted) R.drawable.cinnamorollcontent
+            else if (isListeningToMusic ) R.drawable.cinnamorollmusic
+        else if (isDepressed)
             R.drawable.cinnamorolldepressed
         else
             R.drawable.cinnamorollidle
@@ -33,7 +60,6 @@ fun CinnamorollSprite(state: CinnamorollState, onDrag: (Long) -> Unit, modifier:
         ActionState.Eating -> R.drawable.cinnamorolleat
         ActionState.Gaming -> R.drawable.cinnamorollthinking
         ActionState.Sleeping -> R.drawable.cinnamorollsleep
-        ActionState.Listening -> R.drawable.cinnamorollmusic
     }
     Image(
         painter = rememberDrawablePainter(
@@ -46,9 +72,9 @@ fun CinnamorollSprite(state: CinnamorollState, onDrag: (Long) -> Unit, modifier:
         contentScale = ContentScale.Fit,
         modifier = Modifier
             .draggable(
-                onDragStarted = { petting = true },
-                onDragStopped = { petting = false },
-                state = (rememberDraggableState { delta -> onDrag( abs(delta).toLong() * 10 ) }),
+                onDragStarted = { setDrag(true) },
+                onDragStopped = { setDrag(false) },
+                state = (rememberDraggableState {}),
                 orientation = Orientation.Horizontal
             )
             .fillMaxWidth()

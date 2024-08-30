@@ -15,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,58 +24,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-data class HealthStatus (
-    val hungerProgress: Float,
-    val sleepyProgress: Float,
-    val lonelyProgress: Float,
-    val boredProgress: Float,
+data class StatusPercentage (
+    val hunger: Float,
+    val tired: Float,
+    val lonely: Float,
+    val bored: Float,
 )
-
-fun getHealthStatus(state: CinnamorollState): HealthStatus {
-    val currentTime = System.currentTimeMillis()
-    var hungerProgress: Double = 0.0
-    var sleepyProgress: Double = 0.0
-    if (state.actionState == ActionState.Eating) {
-        hungerProgress = (TIME_TO_STARVE - (state.startedEating - state.lastStarved)).toDouble() / TIME_TO_STARVE
-    } else {
-        hungerProgress = (TIME_TO_STARVE - (currentTime - state.lastStarved)).toDouble() / TIME_TO_STARVE
-    }
-
-    var sleeplessInterval = TIME_TO_LETHARGY - (currentTime - state.lastLethargy)
-    if (sleeplessInterval < 0) sleeplessInterval = 0
-    if (state.actionState == ActionState.Sleeping) {
-        val sleepingInterval = (currentTime - state.startedSleeping) * 2
-        sleepyProgress = (sleeplessInterval + sleepingInterval).toDouble() / TIME_TO_LETHARGY
-    } else {
-        sleepyProgress = (sleeplessInterval).toDouble() / TIME_TO_LETHARGY
-    }
-
-    val lonelyProgress = (TIME_TO_DEPRESSION - (currentTime - state.lastDepression)).toDouble() / TIME_TO_DEPRESSION
-
-    var boredProgress: Double = 0.0
-    var noMusicInterval = TIME_TO_BOREDOM - (currentTime - state.lastBoredom)
-    if (noMusicInterval < 0) noMusicInterval = 0
-    if (state.actionState == ActionState.Listening) {
-        val musicInterval = (currentTime - state.startedListening) * 2
-        boredProgress = (noMusicInterval + musicInterval).toDouble() / TIME_TO_BOREDOM
-    } else {
-        boredProgress = (noMusicInterval).toDouble() / TIME_TO_BOREDOM
-    }
-
-    return HealthStatus(hungerProgress.toFloat(), sleepyProgress.toFloat(), lonelyProgress.toFloat(), boredProgress.toFloat())
-}
 
 @Composable
 fun CinnamorollStatus(state: CinnamorollState, modifier: Modifier = Modifier) {
-    var healthStatus by remember { mutableStateOf(getHealthStatus(state)) }
+//    var rerender by rememberSaveable { mutableStateOf (false) }
+    var status by remember { mutableStateOf (state.statusAsPercentage()) }
+
+    val doRerender: () -> Unit = {
+//        rerender = !rerender
+        status = state.statusAsPercentage()
+    }
 
     LaunchedEffect(state) {
         while (true) {
-            healthStatus = getHealthStatus(state)
+            doRerender()
             delay(250)
         }
     }
-
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -91,7 +63,7 @@ fun CinnamorollStatus(state: CinnamorollState, modifier: Modifier = Modifier) {
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
-                    progress = { healthStatus.hungerProgress },
+                    progress = { status.hunger },
                     color = Color.Red
                 )
                 Text("\uD83C\uDF4E", fontSize = 20.sp)
@@ -100,7 +72,7 @@ fun CinnamorollStatus(state: CinnamorollState, modifier: Modifier = Modifier) {
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
-                    progress = { healthStatus.sleepyProgress },
+                    progress = { status.tired },
                     color = Color.Blue
                 )
                 Text("\uD83D\uDCA4", fontSize = 20.sp)
@@ -109,7 +81,7 @@ fun CinnamorollStatus(state: CinnamorollState, modifier: Modifier = Modifier) {
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
-                    progress = { healthStatus.lonelyProgress },
+                    progress = { status.lonely },
                     color = Color.Green
                 )
                 Text("\uD83E\uDEC2", fontSize = 20.sp)
@@ -118,7 +90,7 @@ fun CinnamorollStatus(state: CinnamorollState, modifier: Modifier = Modifier) {
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
-                    progress = { healthStatus.boredProgress },
+                    progress = { status.bored },
                     color = Color.Gray
                 )
                 Text("\uD83E\uDD71", fontSize = 20.sp)
