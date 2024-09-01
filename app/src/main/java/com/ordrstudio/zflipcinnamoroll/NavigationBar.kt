@@ -6,14 +6,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 @Composable
 fun NavigationBar(
@@ -21,22 +24,24 @@ fun NavigationBar(
     toggleDisplayHUD: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selected by rememberSaveable { mutableIntStateOf(1 ) }
-    val setSelected: (Int) -> Unit = { value: Int ->
-        run {
-            selected = value
-            when (value) {
-                1 -> state.idle()
-                2 -> state.eat()
-                3 -> state.playGame()
-                4 -> state.sleep()
-            }
+    var rerender by rememberSaveable { mutableStateOf (false) }
+    var canIdle by rememberSaveable { mutableStateOf (state.canIdle()) }
+    var canEat by rememberSaveable { mutableStateOf (state.canEat()) }
+    var canGame by rememberSaveable { mutableStateOf (state.canGame()) }
+    var canSleep by rememberSaveable { mutableStateOf (state.canSleep()) }
 
-        }
+    val doRerender: () -> Unit = {
+        rerender = !rerender
+        canIdle = state.canIdle()
+        canEat = state.canEat()
+        canGame = state.canGame()
+        canSleep = state.canSleep()
     }
-
-    fun shouldEnable(num: Int) : Boolean {
-        return !state.isBusy() && num != selected
+    LaunchedEffect(rerender) {
+        while (true) {
+            doRerender()
+            delay(1000)
+        }
     }
 
     BottomAppBar(
@@ -47,26 +52,26 @@ fun NavigationBar(
         contentColor = MaterialTheme.colorScheme.primary,
         actions = {
             TextButton(
-                onClick = { setSelected(1) },
-                enabled = !state.canIdle(),
+                onClick = { state.idle() },
+                enabled = canIdle,
             ) {
                 Text("\uD83D\uDE42", fontSize = 20.sp)
             }
             TextButton(
-                onClick = { setSelected(2) },
-                enabled = !state.canEat(),
+                onClick = { state.eat() },
+                enabled = canEat,
             ) {
                 Text("\uD83C\uDF7D\uFE0F", fontSize = 20.sp)
             }
             TextButton(
-                onClick = { setSelected(3)},
-                enabled = !state.canGame(),
+                onClick = { state.playGame() },
+                enabled = canGame,
             ) {
                 Text("\uD83C\uDFAE", fontSize = 20.sp)
             }
             TextButton(
-                onClick = {  setSelected(4) },
-                enabled = !state.canSleep(),
+                onClick = { state.sleep() },
+                enabled = canSleep,
             ) {
                 Text("\uD83D\uDCA4", fontSize = 20.sp)
             }

@@ -30,10 +30,6 @@ class GameLogic(
             shouldRerender = true
         }
 
-        if (shouldRerender) {
-            println("" + previousActionState + " " + state.actionState)
-        }
-
         previousActionState = state.actionState
 
         return shouldRerender

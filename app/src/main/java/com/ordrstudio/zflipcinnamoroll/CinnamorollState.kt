@@ -1,6 +1,7 @@
 package com.ordrstudio.zflipcinnamoroll
 
 import android.os.Parcelable
+import com.google.common.primitives.Longs.min
 import com.google.firebase.firestore.Exclude
 import kotlinx.parcelize.Parcelize
 import java.time.LocalDateTime
@@ -8,20 +9,27 @@ import java.util.Date
 import kotlin.math.max
 import kotlin.math.min
 
-const val HUNGER_RATE = 0.5f
-const val LONELY_RATE = 1f
-const val BORED_RATE = 0.75f
-const val TIRED_RATE = 0.25f
+const val HUNGER_RATE = 0.2f
+const val LONELY_RATE = 0.3f
+const val BORED_RATE = 0.3f
+const val TIRED_RATE = 0.2f
 
 const val EAT_DURATION = 5000
-const val HUNGER_RECOVERY_RATE = 15f
-const val MUSIC_RECOVERY_RATE = 0.5f
-const val PETTING_RECOVERY_RATE = 10f
-const val SLEEP_RECOVERY_RATE = 5f
+const val HUNGER_RECOVERY_RATE = 50f
+const val MUSIC_RECOVERY_RATE = 5f
+const val PETTING_RECOVERY_RATE = 15f
+const val SLEEP_RECOVERY_RATE = 15f
+
+
 
 enum class ActionState {
     Idling, Eating, Sleeping, Gaming
 }
+
+data class NotifyData(
+    val about: ReminderAbout,
+    val notifyTime: Long,
+)
 
 @Parcelize
 class CinnamorollState (
@@ -142,5 +150,30 @@ class CinnamorollState (
 
     fun readableLastUpdated() : String {
         return Date(lastUpdated).toString()
+    }
+
+    fun untilStarving() : Long {
+        return (Math.round(hunger / HUNGER_RATE) * 1000).toLong()
+    }
+
+    fun untilBoredom() : Long {
+        return (Math.round(bored / BORED_RATE) * 1000).toLong()
+    }
+
+    fun untilDepression() : Long {
+        return (Math.round(lonely / LONELY_RATE) * 1000).toLong()
+    }
+
+    fun untilExhaustion() : Long {
+        return (Math.round(tired / TIRED_RATE) * 1000).toLong()
+    }
+
+    fun estimateTimeToNextNotification() : NotifyData {
+        return arrayOf(
+            NotifyData(ReminderAbout.Starving, untilStarving()),
+            NotifyData(ReminderAbout.Depressed, untilDepression()),
+            NotifyData(ReminderAbout.Boredom, untilBoredom()),
+            NotifyData(ReminderAbout.Exhausted, untilExhaustion()),
+        ).filter {it.notifyTime > NOTIFICATION_TIME_CUTOFF}.minBy { it.notifyTime }
     }
 }
