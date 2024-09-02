@@ -11,6 +11,8 @@ import android.os.Build
 import android.os.Parcelable
 import androidx.core.app.NotificationCompat
 import kotlinx.parcelize.Parcelize
+import java.text.SimpleDateFormat
+import java.util.Date
 import kotlin.random.Random
 
 const val NOTIFICATION_TIME_CUTOFF = 10000
@@ -76,6 +78,10 @@ class NotificationHandler(private val context: Context) {
                 },
                 PendingIntent.FLAG_IMMUTABLE
             )
+            println("Setting an alarm for")
+            val date = Date(System.currentTimeMillis() + data.notifyTime)
+            val format = SimpleDateFormat("HH:mm:ss")
+            println(format.format(date))
             alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + data.notifyTime, pendingIntent)
         }
     }
@@ -108,6 +114,7 @@ class NotificationHandler(private val context: Context) {
 
 class NotificationReceiver: BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
+        println("We received")
         val notificationService = context?.let { NotificationHandler(it) }
         if (intent?.hasExtra(INTENT_EXTRA_ABOUT) == true) {
             notificationService?.sendNotification(intent.getSerializableExtra(

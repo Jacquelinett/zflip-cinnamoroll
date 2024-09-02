@@ -29,6 +29,7 @@ data class StatusPercentage (
     val tired: Float,
     val lonely: Float,
     val bored: Float,
+    val lastUpdated: Long = System.currentTimeMillis()
 )
 
 @Composable

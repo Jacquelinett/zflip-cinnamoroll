@@ -22,6 +22,7 @@ firebaseFirestore = "25.1.0"
 accompanistPermissions = "0.35.2-beta"
 firebaseBom = "33.2.0"
 workRuntimeKtx = "2.9.1"
+prettytime = "5.0.9.Final"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,6 +53,7 @@ firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
+prettytime = { group = "org.ocpsoft.prettytime", name = "prettytime", version.ref = "prettytime" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

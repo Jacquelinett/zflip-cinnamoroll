@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.accompanist.permissions)
     implementation(libs.firebase.bom)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.prettytime)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

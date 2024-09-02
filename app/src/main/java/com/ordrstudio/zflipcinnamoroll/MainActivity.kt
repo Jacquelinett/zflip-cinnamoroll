@@ -153,7 +153,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         notificationHandler.clearAlarm()
-        WorkManager.getInstance(this).cancelUniqueWork(BACKGROUND_WORK_UNIQUE_NAME)
+        WorkManager.getInstance(this@MainActivity).cancelUniqueWork(BACKGROUND_WORK_UNIQUE_NAME)
     }
 
     override fun onPause() {
@@ -163,13 +163,13 @@ class MainActivity : ComponentActivity() {
                 .addOnSuccessListener { documentReference ->
                     notificationHandler.scheduleNotification(state)
                     if (widgetExist) {
+                        WorkManager.getInstance(this@MainActivity)
+                            .enqueueUniquePeriodicWork(BACKGROUND_WORK_UNIQUE_NAME, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, backgroundUpdateWorkRequest)
                         runBlocking {
                             launch {
                                 updateWidgets()
                             }
                         }
-                        WorkManager.getInstance(this)
-                            .enqueueUniquePeriodicWork(BACKGROUND_WORK_UNIQUE_NAME, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, backgroundUpdateWorkRequest)
                     }
                 }
                 .addOnFailureListener { e ->
